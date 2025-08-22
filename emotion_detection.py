@@ -7,38 +7,29 @@ HEADERS = {"grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_sto
 
 def emotion_detector(text_to_analyse):
     """
-    Calls the Watson NLP EmotionPredict endpoint and returns a dict:
-    {
-      'anger': float, 'disgust': float, 'fear': float,
-      'joy': float, 'sadness': float, 'dominant_emotion': str
-    }
+    Returns a dict with five scores and dominant_emotion.
+    If the upstream returns HTTP 400 (blank text), return the same keys with None values.
     """
-    payload = {"raw_document": {"text": text_to_analyse}}
-    response = requests.post(URL, headers=HEADERS, json=payload)  # spec: use response.text
+    payload = {"raw_document": {"text": text_to_analyse if text_to_analyse is not None else ""}}
+    response = requests.post(URL, headers=HEADERS, json=payload)
+
+    # Required by the assignment for blank entries:
+    if response.status_code == 400:
+        return {
+            "anger": None, "disgust": None, "fear": None,
+            "joy": None, "sadness": None, "dominant_emotion": None
+        }
+
+    # Normal success path
     data = json.loads(response.text)
-
-    # Navigate to the emotion scores
     emotions = data["emotionPredictions"][0]["emotion"]
-    anger   = emotions.get("anger",   0.0)
-    disgust = emotions.get("disgust", 0.0)
-    fear    = emotions.get("fear",    0.0)
-    joy     = emotions.get("joy",     0.0)
-    sadness = emotions.get("sadness", 0.0)
-
     scores = {
-        "anger": anger,
-        "disgust": disgust,
-        "fear": fear,
-        "joy": joy,
-        "sadness": sadness,
+        "anger":   emotions.get("anger", 0.0),
+        "disgust": emotions.get("disgust", 0.0),
+        "fear":    emotions.get("fear", 0.0),
+        "joy":     emotions.get("joy", 0.0),
+        "sadness": emotions.get("sadness", 0.0),
     }
     dominant = max(scores, key=scores.get)
 
-    return {
-        "anger": anger,
-        "disgust": disgust,
-        "fear": fear,
-        "joy": joy,
-        "sadness": sadness,
-        "dominant_emotion": dominant,
-    }
+    return {**scores, "dominant_emotion": dominant}

@@ -1,3 +1,5 @@
+"""Flask web app exposing /emotionDetector and home routes for emotion detection."""
+
 from flask import Flask, request, render_template
 from EmotionDetection import emotion_detector
 
